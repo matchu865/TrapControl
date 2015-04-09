@@ -13,8 +13,7 @@ Android Client -> Server
 # Request Account Info
 
 <user>
-    <name>
-    </name>
+    <name></name>
     <account></account>
     <request></request>
     <trap></trap>
