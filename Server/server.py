@@ -16,15 +16,18 @@ class ControlSystem(LineReceiver):
 		self.users = users
 		self.traps = traps
 		self.account = None #users & traps can have the same number
+		self.new = True
 
 	def connectionMade(self):
 		print "connectionMade"
 				
 	def connectionLost(self, reason):
 		print "connectionLost " 
-		#if self.name in self.users:
-		#	del self.users[self.name]	#removing user instance
-		pass
+		if self.account in self.users:
+			del self.users[self.account]	#removing user instance
+		elif self.account in self.traps:
+			del self.traps[self.account]
+		print "User removed"
 
 	def lineReceived(self, line):
 		print "lineReceived: " + line
@@ -48,10 +51,14 @@ class ControlSystem(LineReceiver):
 		print msg['user']['account']
 		#check to see if acct. already exists
 		if msg['user']['account'] in self.users:
-			##process request
+			if msg['user']['request'] == 'THROW':
+				self.sendTrapResponse('THROW',msg['user']['trap'], msg['user']['target'])
+
 			pass
-		else: #new user
+		elif self.new: #new user
 			self.addAccount(msg)
+		else:
+			self.sendLine("Account already exists")
 
 	#Respond to request from Trap
 	def trapResponse(self, msg):
@@ -64,15 +71,15 @@ class ControlSystem(LineReceiver):
 			self.addTrap(msg)
 
 
-
 	#Adds a user to the server so they can request targets		
 	def addAccount(self, msg):
 		self.account = msg['user']['account']
 		self.name = msg['user']['name']
-		self.numTargets = 0		#new accounts will start with 0
+		self.numTargets = 0		#new accounts will start with 0 targets
+		self.new = False
 		self.users[self.account] = self
 		#Need to add message
-		print "Added: " + self.name + self.account
+		print "Added user: " + self.name + " " + self.account
 	
 	#Adds a trap to the server
 	def addTrap(self, msg):
@@ -80,13 +87,41 @@ class ControlSystem(LineReceiver):
 		self.status = msg['trap']['status']
 		self.hInv = msg['trap']['hInv']
 		self.lInv = msg['trap']['lInv']
-		self.traps[tnum] = self
-		print "Added: " + self.tnum 
+		self.new = False
+		self.traps[self.tnum] = self
+		print "Added trap: " + self.tnum
 
-
+	def sendUsrResponse(self, response, trap, name, account, numTargets):
+		mydict = {'userServer': {
+			'response' : response ,
+			'trap' : trap ,
+			'name' : name ,
+			'account' : account ,
+			'numTargets' : numTargets,}}
+		if self.users[account]:
+			self.users[account].sendLine(xmltodict.unparse(mydict).encode("utf-8"))
+		else:
+			##USER Does Not Exist Recursively send error message
+			print "ERROR: sending user message"
+			self.sendUsrResponse('ERROR',trap,self.name,self.account, self.numTargets)
 		
 
-		
+	def sendTrapResponse(self, command, tnum, target):
+		print "contacting trap: " + command, tnum, target
+		if self.traps[tnum] : 
+			mydict = {'trapServer' : {
+			'command' : command,
+			'tnum' : tnum,
+			'target' : target,
+			}}
+			self.traps[tnum].sendLine(xmltodict.unparse(mydict).encode("utf-8"))
+		else: 
+			sendUsrResponse('BUSY', tnum, self.name, self.account, '0')
+
+
+
+
+
 
 
 class ControlSystemFactory(Factory):
