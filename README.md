@@ -22,9 +22,7 @@ Android Client -> Server
 
 name: contains name of user ex. "John Smith"
 account: contains user's account number (must be unique)
-request:    "CREATE" -> create acct. 
-            "CONNECT" -> connect to trap 
-            "THROW" -> request to launch target
+request:    "THROW" -> request to launch target
             "FAIL" -> report a fail of the target
             "INFO" -> request acct info
             "PAY" -> requests acct. be reset (may not be implemented) 
@@ -70,7 +68,7 @@ Server -> Trap Client
 </trapServer>
 
 command:    "THROW" -> request to throw target
-            "ACCEPT" -> response to adding trap client
+            "ACCEPT" -> response to adding trap client **MAY REMOVE**
             "SHUTDOWN" -> request to take trapclient online
 tnum: trap number
 target: "H" -> high trap "L" -> low trap "P" -> Pair
@@ -92,7 +90,7 @@ Trap Client -> Server
 </trap>
 
 tnum: trap number
-status: "H" -> high trap busy "L" -> low trap busy "P" -> both busy
+status: "H" -> high trap busy "L" -> low trap busy "P" -> both busy "R" -> Ready
 response:   "SUCCESS" -> trap successfully thrown
             "FAIL" -> problem with trap
 hInv: high trap inventory
