@@ -11,7 +11,7 @@ TCP_IP = '127.0.0.1'
 TCP_PORT = 8000
 
 BUFFER_SIZE = 1024
-
+DELAY = 2
 
 class TrapClient:
 	def __init__(self, tnum):
@@ -21,7 +21,7 @@ class TrapClient:
 		self.tnum = tnum
 		self.sock = None
 		self.timeH = time.time()
-		self.timeL
+		self.timeL = self.timeH
 		print "finished init"
 
 
@@ -35,18 +35,51 @@ class TrapClient:
 		print "finished connect"
 
 	def run(self):
+		print "running"
 		while 1:
 			print "blocking on data"
 			data = self.sock.recv(BUFFER_SIZE)
 			xmldata = xmltodict.parse(data)
+			hStat = ((time.time() - self.timeH) > DELAY)
+			lStat = ((time.time() - self.timeL) > DELAY)
+
+			"""Handle 'THROW' commands. Could reduce redundancy but for prototype unneccessary"""
 			if xmldata['trapServer']['command'] == 'THROW':
-					#set status
-					#reply SUCCESS
-
-
-				pass
+				#Pair				
+				if xmldata['trapServer']['target'] == 'P':
+					if not hStat or not lStat or self.hInv <= 0 or self.lInv <=0:
+						#FAIL
+						self.sendMessage(self.tnum, 'P', 'FAIL', self.hInv, self.lInv)
+					else:
+						self.hInv -= 1
+						self.lInv -= 1
+						self.timeH = time.time()
+						self.timeL = self.timeH
+						self.sendMessage(self.tnum, 'P', 'SUCCESS', self.hInv, self.lInv)
+				#High House 
+				elif xmldata['trapServer']['target'] == 'H' or self.hInv <=0:
+					if not hStat:
+						self.sendMessage(self.tnum, 'H', 'FAIL', self.hInv, self.lInv)
+					else:
+						self.hInv -= 1
+						self.timeH = time.time()
+						self.sendMessage(self.tnum, 'H', 'SUCCESS', self.hInv, self.lInv)
+				#Low House
+				elif xmldata['trapServer']['target'] == 'L' or self.lInv <=0:
+					if not lStat:
+						self.sendMessage(self.tnum, 'L', 'FAIL', self.hInv, self.lInv)
+					else:
+						self.lInv -= 1
+						self.timeL = time.time()
+						self.sendMessage(self.tnum, 'L', 'SUCCESS', self.hInv, self.lInv)
+				else:
+					print "ERROR: " + xmldata['trapServer']['target']
+					self.sendMessage(self.tnum, 'P', 'FAIL', self.hInv, self.lInv)
+			elif xmldata['trapServer']['command'] == 'SHUTDOWN':
+				print "Shutting Down Trap"
+				self.sock.close()
 			else:
-				pass
+				print "Received Illegal message. No action"
 
 
 
@@ -73,7 +106,7 @@ def main():
 
 
 	except Exception as ex:
-		print ex.message
+		print "EXCEPTION: " + ex.message
 		return 1
 	else:
 		return 0	
