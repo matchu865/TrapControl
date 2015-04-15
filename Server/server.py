@@ -16,6 +16,7 @@ class ControlSystem(LineReceiver):
 		self.users = users
 		self.traps = traps
 		self.account = None #users & traps can have the same number
+		self.tnum = None
 		self.new = True
 
 	def connectionMade(self):
@@ -23,10 +24,10 @@ class ControlSystem(LineReceiver):
 				
 	def connectionLost(self, reason):
 		print "connectionLost " 
-		if self.account in self.users:
+		if self.users.get(self.account):
 			del self.users[self.account]	#removing user instance
-		elif self.account in self.traps:
-			del self.traps[self.account]
+		elif self.traps.get(self.tnum):
+			del self.traps[self.tnum]
 		print "User removed"
 
 	def lineReceived(self, line):
@@ -35,16 +36,21 @@ class ControlSystem(LineReceiver):
 
 	#initial handler that parses xml to an orderedDict
 	def handle_INPUT(self, data):
-		
-		xmldata = xmltodict.parse(data)
-		if 'user' in xmldata.keys():
-			print "Handling User Request"
-			self.userResponse(xmldata)
-		elif 'trap' in xmldata.keys():
-			print "Handling Trap Request"
-			self.trapResponse(xmldata)
-		else:
-			self.sendLine("Illegal Request: 0")	
+		xmldata = None
+		try:	
+			xmldata = xmltodict.parse(data)
+			if xmldata.get('user'):
+				print "Handling User Request"
+				self.userResponse(xmldata)
+			elif xmldata.get('trap'):
+				print "Handling Trap Request"
+				self.trapResponse(xmldata)
+			else:
+				self.sendLine("Illegal Request: 0")	
+		except Exception as ex:
+			print "EXCEPTION: " + str(ex) 
+			self.sendLine("Illegal Request: " + str(ex))
+
 
 	#Respond to request from User
 	def userResponse(self, msg):
@@ -53,8 +59,18 @@ class ControlSystem(LineReceiver):
 		if msg['user']['account'] in self.users:
 			if msg['user']['request'] == 'THROW':
 				self.sendTrapResponse('THROW',msg['user']['trap'], msg['user']['target'])
-
-			pass
+			#allow user to credit for trap error not caught by trap response
+			elif msg['user']['request'] == 'FAIL':
+				if self.numTargets > 0: self.numTargets -= 1
+				self.sendUsrResponse('SUCCESS', '', self.name, self.account, self.numTargets)
+			elif msg['user']['request'] == 'INFO':
+				self.sendUsrResponse('SUCCESS', '', self.name, self.account, self.numTargets)
+			elif msg['user']['request'] == 'PAY':
+				self.numTargets = 0 #user 'paid'
+				#may change to prompt user to disconnect. Now a standard success response is sent
+				self.sendUsrResponse('SUCCESS', '', self.name, self.account, self.numTargets)
+			else:
+				pass
 		elif self.new: #new user
 			self.addAccount(msg)
 		else:
@@ -65,9 +81,21 @@ class ControlSystem(LineReceiver):
 		print msg['trap']['tnum']
 		#check to see if acct. already exists
 		if msg['trap']['tnum'] in self.traps:
-			pass
-			##process request
-		else: #new user
+			self.tnum = msg['trap']['tnum']
+			account = msg['trap']['account']
+			self.status = msg['trap']['status']
+			self.hInv = msg['trap']['hInv']
+			self.lInv = msg['trap']['lInv']
+			response = msg['trap']['response']
+			if response == 'SUCCESS':
+				#increment user's numTargets
+				if self.status == 'P':
+					self.users[account].numTargets += 2
+				else:
+					self.users[account].numTargets += 1
+			self.sendUsrResponse(response,self.tnum,'',account, self.users[account].numTargets)
+		#new user
+		else: 
 			self.addTrap(msg)
 
 
@@ -91,7 +119,7 @@ class ControlSystem(LineReceiver):
 		self.traps[self.tnum] = self
 		print "Added trap: " + self.tnum
 
-	def sendUsrResponse(self, response, trap, name, account, numTargets):
+	def sendUsrResponse(self, response, trap,name, account, numTargets):
 		mydict = {'userServer': {
 			'response' : response ,
 			'trap' : trap ,
@@ -113,6 +141,7 @@ class ControlSystem(LineReceiver):
 			'command' : command,
 			'tnum' : tnum,
 			'target' : target,
+			'account' : self.account
 			}}
 			self.traps[tnum].sendLine(xmltodict.unparse(mydict).encode("utf-8"))
 		else: 

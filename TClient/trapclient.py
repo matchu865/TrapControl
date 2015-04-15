@@ -17,7 +17,6 @@ class TrapClient:
 	def __init__(self, tnum):
 		self.hInv = 250
 		self.lInv = 250
-		self.status = 'R'
 		self.tnum = tnum
 		self.sock = None
 		self.timeH = time.time()
@@ -31,7 +30,7 @@ class TrapClient:
 		self.sock.connect((TCP_IP, TCP_PORT))
 
 		#Send welcome message
-		self.sendMessage(self.tnum, self.status, 'R', self.hInv, self.lInv)		
+		self.sendMessage(0, 'R', 'SUCCESS', self.hInv, self.lInv)		
 		print "finished connect"
 
 	def run(self):
@@ -49,32 +48,32 @@ class TrapClient:
 				if xmldata['trapServer']['target'] == 'P':
 					if not hStat or not lStat or self.hInv <= 0 or self.lInv <=0:
 						#FAIL
-						self.sendMessage(self.tnum, 'P', 'FAIL', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'P', 'FAIL', self.hInv, self.lInv)
 					else:
 						self.hInv -= 1
 						self.lInv -= 1
 						self.timeH = time.time()
 						self.timeL = self.timeH
-						self.sendMessage(self.tnum, 'P', 'SUCCESS', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'P', 'SUCCESS', self.hInv, self.lInv)
 				#High House 
 				elif xmldata['trapServer']['target'] == 'H' or self.hInv <=0:
 					if not hStat:
-						self.sendMessage(self.tnum, 'H', 'FAIL', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'H', 'FAIL', self.hInv, self.lInv)
 					else:
 						self.hInv -= 1
 						self.timeH = time.time()
-						self.sendMessage(self.tnum, 'H', 'SUCCESS', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'H', 'SUCCESS', self.hInv, self.lInv)
 				#Low House
 				elif xmldata['trapServer']['target'] == 'L' or self.lInv <=0:
 					if not lStat:
-						self.sendMessage(self.tnum, 'L', 'FAIL', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'L', 'FAIL', self.hInv, self.lInv)
 					else:
 						self.lInv -= 1
 						self.timeL = time.time()
-						self.sendMessage(self.tnum, 'L', 'SUCCESS', self.hInv, self.lInv)
+						self.sendMessage(xmldata['trapServer']['account'], 'L', 'SUCCESS', self.hInv, self.lInv)
 				else:
 					print "ERROR: " + xmldata['trapServer']['target']
-					self.sendMessage(self.tnum, 'P', 'FAIL', self.hInv, self.lInv)
+					self.sendMessage(xmldata['trapServer']['account'], 'P', 'FAIL', self.hInv, self.lInv)
 			elif xmldata['trapServer']['command'] == 'SHUTDOWN':
 				print "Shutting Down Trap"
 				self.sock.close()
@@ -84,9 +83,10 @@ class TrapClient:
 
 
 	#Sends reply to server over socket
-	def sendMessage(self, tnum, status, response, hInv, lInv):
+	def sendMessage(self, account, status, response, hInv, lInv):
 		msg = { 'trap' :{
-			'tnum' : tnum,
+			'tnum' : self.tnum,
+			'account' : account,
 			'status' : status,
 			'response' : response,
 			'hInv' : hInv,
@@ -106,7 +106,7 @@ def main():
 
 
 	except Exception as ex:
-		print "EXCEPTION: " + ex.message
+		print "EXCEPTION: " + str(ex)
 		return 1
 	else:
 		return 0	
