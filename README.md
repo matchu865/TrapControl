@@ -47,8 +47,8 @@ Server -> Android Client
 </userServer>
 
 response:   "ACCEPT" -> accept client upon connection or acct. creation
-            "INFO" -> standard response, serves all fields(trap can be NULL)
-            "BUSY" -> trap requested is busy, offline, not ready 
+            "SUCCESS" -> standard response, serves all fields(trap can be NULL)
+            "FAIL" -> trap requested is busy, offline, not ready 
 trap: trap number client is requesting commmunication from
 name: user's name
 Account: user's acct. number (unique)
@@ -62,6 +62,7 @@ Server -> Trap Client
 
 
 <trapServer>
+    <account></account>
     <command></command>
     <tnum></tnum>
     <target></target>
@@ -82,7 +83,7 @@ Trap Client -> Server
 # Reply Ready/Busy (Includes Inventory Info)
 
 <trap>
-    <tnum></tnum>
+    <account></account>
     <status></status>
     <response></response>
     <hInv></hInv>
@@ -90,7 +91,7 @@ Trap Client -> Server
 </trap>
 
 tnum: trap number
-status: "H" -> high trap busy "L" -> low trap busy "P" -> both busy "R" -> Ready
+status: "H" -> high trap "L" -> low trap "P" -> Pair "R" -> Ready
 response:   "SUCCESS" -> trap successfully thrown
             "FAIL" -> problem with trap
 hInv: high trap inventory

@@ -1,20 +1,30 @@
 
 #!/usr/bin/env python 
 
-#import RPi.GPIO as GPIO  #GPIO Library for rasberry pi
+import RPi.GPIO as GPIO  #GPIO Library for rasberry pi
 import sys
 import time
 import socket
 import xmltodict
+from threading import Thread
 
-TCP_IP = '127.0.0.1'
+TCP_IP = '54.149.14.43'
 TCP_PORT = 8000
+PIN1 = 3
+PIN2 = 5
 
 BUFFER_SIZE = 1024
-DELAY = 2
+DELAY = 4
 
 class TrapClient:
 	def __init__(self, tnum):
+
+		#configure gpio
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setmode(GPIO.BOARD)
+		GPIO.setup(PIN1,GPIO.OUT,initial = 1)
+		GPIO.setup(PIN2,GPIO.OUT,initial = 1)
+
 		self.hInv = 250
 		self.lInv = 250
 		self.tnum = tnum
@@ -38,6 +48,7 @@ class TrapClient:
 		while 1:
 			print "blocking on data"
 			data = self.sock.recv(BUFFER_SIZE)
+			print "line received: " + data
 			xmldata = xmltodict.parse(data)
 			hStat = ((time.time() - self.timeH) > DELAY)
 			lStat = ((time.time() - self.timeL) > DELAY)
@@ -55,6 +66,10 @@ class TrapClient:
 						self.timeH = time.time()
 						self.timeL = self.timeH
 						self.sendMessage(xmldata['trapServer']['account'], 'P', 'SUCCESS', self.hInv, self.lInv)
+
+						#thread and wait
+						t = Thread(target = gpioDelay, args(True,True))
+						t.start()
 				#High House 
 				elif xmldata['trapServer']['target'] == 'H' or self.hInv <=0:
 					if not hStat:
@@ -63,6 +78,9 @@ class TrapClient:
 						self.hInv -= 1
 						self.timeH = time.time()
 						self.sendMessage(xmldata['trapServer']['account'], 'H', 'SUCCESS', self.hInv, self.lInv)
+
+						t = Thread(target = gpioDelay, args(True,False))
+						t.start()
 				#Low House
 				elif xmldata['trapServer']['target'] == 'L' or self.lInv <=0:
 					if not lStat:
@@ -71,6 +89,9 @@ class TrapClient:
 						self.lInv -= 1
 						self.timeL = time.time()
 						self.sendMessage(xmldata['trapServer']['account'], 'L', 'SUCCESS', self.hInv, self.lInv)
+
+						t = Thread(target = gpioDelay, args(False,True))
+						t.start()
 				else:
 					print "ERROR: " + xmldata['trapServer']['target']
 					self.sendMessage(xmldata['trapServer']['account'], 'P', 'FAIL', self.hInv, self.lInv)
@@ -94,6 +115,14 @@ class TrapClient:
 		}}
 		self.sock.send(xmltodict.unparse(msg).encode("utf-8") + "\r\n")
 
+	def setGPIO(self, hightrap, lowtrap):
+		GPIO.output(PIN1,hightrap)
+		GPIO.output(PIN2,lowtrap)
+		time.sleep(DELAY)
+		if not hightrap:
+			GPIO.output(PIN1, True)
+		if not lowtrap:
+			GPIO.output(PIN2, True)
 
 
 
