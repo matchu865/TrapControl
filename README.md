@@ -5,10 +5,10 @@
 <h3>Android Client -> Server</h3>
 
 * Create Account
-* Connect to trap (optional?)
 * Send Target Request
-* Send info upon failed target ()
+* Send info upon failed target 
 * Request Account Info
+* Pay
 
 ```XML
 <user>
