@@ -1,17 +1,16 @@
-# TrapControl
-# Android Client (User), Rasberry Pi Client (Trap), Python Server (AWS?)
+<h1>TrapControl</h1>
+<h4>User Client (Android), Trap Client (Rasberry Pi), Python Server (AWS)</h4>
+<h2>Messaging Protocol</h2>
 
+<h3>Android Client -> Server</h3>
+--------------------------
+<p>Create Account</p>
+Connect to trap (optional?)
+Send Target Request
+Send info upon failed target ()
+Request Account Info
 
-Messaging Protocol
-
-Android Client -> Server
-####################################
-# Create Account
-# Connect to trap (optional?)
-# Send Target Request
-# Send info upon failed target ()
-# Request Account Info
-
+```XML
 <user>
     <name></name>
     <account></account>
@@ -19,6 +18,7 @@ Android Client -> Server
     <trap></trap>
     <target></target>
 </user>
+```
 
 name: contains name of user ex. "John Smith"
 account: contains user's account number (must be unique)
