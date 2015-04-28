@@ -68,7 +68,7 @@ class TrapClient:
 						self.sendMessage(xmldata['trapServer']['account'], 'P', 'SUCCESS', self.hInv, self.lInv)
 
 						#thread and wait
-						t = Thread(target = gpioDelay, args(True,True))
+						t = Thread(target = self.gpioDelay, args = (False,False))
 						t.start()
 				#High House 
 				elif xmldata['trapServer']['target'] == 'H' or self.hInv <=0:
@@ -79,7 +79,7 @@ class TrapClient:
 						self.timeH = time.time()
 						self.sendMessage(xmldata['trapServer']['account'], 'H', 'SUCCESS', self.hInv, self.lInv)
 
-						t = Thread(target = gpioDelay, args(True,False))
+						t = Thread(target = self.gpioDelay, args = (False,True))
 						t.start()
 				#Low House
 				elif xmldata['trapServer']['target'] == 'L' or self.lInv <=0:
@@ -90,7 +90,7 @@ class TrapClient:
 						self.timeL = time.time()
 						self.sendMessage(xmldata['trapServer']['account'], 'L', 'SUCCESS', self.hInv, self.lInv)
 
-						t = Thread(target = gpioDelay, args(False,True))
+						t = Thread(target = self.gpioDelay, args = (True,False))
 						t.start()
 				else:
 					print "ERROR: " + xmldata['trapServer']['target']
@@ -115,9 +115,14 @@ class TrapClient:
 		}}
 		self.sock.send(xmltodict.unparse(msg).encode("utf-8") + "\r\n")
 
-	def setGPIO(self, hightrap, lowtrap):
-		GPIO.output(PIN1,hightrap)
-		GPIO.output(PIN2,lowtrap)
+	def gpioDelay(self, hightrap, lowtrap):
+		if not hightrap and not lowtrap:
+			GPIO.output(PIN1,hightrap)
+			GPIO.output(PIN2,lowtrap)
+		elif not hightrap:
+			GPIO.output(PIN1,hightrap)
+		else:
+			GPIO.output(PIN2,lowtrap)
 		time.sleep(DELAY)
 		if not hightrap:
 			GPIO.output(PIN1, True)
